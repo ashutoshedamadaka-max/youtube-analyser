@@ -8,3 +8,5 @@ python-pptx
 matplotlib
 Pillow
 requests
+fastapi
+uvicorn[standard]
