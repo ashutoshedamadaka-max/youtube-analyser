@@ -1,0 +1,26 @@
+﻿# Environment & secrets
+.env
+token.json
+credentials.json
+
+# Virtual environment
+.venv/
+
+# Temporary processing files
+.tmp/
+
+# Output deliverables (regenerated on demand)
+output/
+*.pptx
+
+# Node
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# OS
+.DS_Store
+Thumbs.db
