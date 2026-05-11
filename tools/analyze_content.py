@@ -280,7 +280,12 @@ def analyze_thumbnails(thumbnails):
             )},
         ],
     )
-    return parse_json(synth.choices[0].message.content)
+    try:
+        return parse_json(synth.choices[0].message.content)
+    except Exception:
+        return {"dominant_visual_style": "Analysis unavailable", "color_palette_trends": [],
+                "face_character_usage": "", "text_overlay_patterns": [],
+                "emotional_tone": "", "design_recommendations": []}
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
