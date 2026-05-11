@@ -99,6 +99,13 @@ async def status(job_id: str):
     return job
 
 
+@app.post("/reset")
+async def reset():
+    global _busy
+    _busy = False
+    return {"status": "reset"}
+
+
 @app.get("/download/{job_id}")
 async def download(job_id: str):
     job = jobs.get(job_id)
