@@ -18,6 +18,8 @@ def parse_json(text):
     text = text.strip()
     text = re.sub(r"^```(?:json)?\s*", "", text)
     text = re.sub(r"\s*```$", "", text)
+    # Remove trailing commas before } or ] (GPT-4o occasionally produces these)
+    text = re.sub(r",\s*([}\]])", r"\1", text)
     return json.loads(text)
 
 
