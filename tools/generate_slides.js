@@ -116,7 +116,8 @@ function sublabel(slide, x, y, w, text) {
 function body(slide, x, y, w, h, text, opts = {}) {
   const { size = 10, color = C.TEXT, align = 'left', bold = false,
           italic = false, mono = false } = opts;
-  slide.addText(text || '', {
+  const safeText = Array.isArray(text) ? text.join(' · ') : String(text || '');
+  slide.addText(safeText, {
     x, y, w, h,
     fontSize: size, bold, italic, color, align,
     fontFace: mono ? 'Consolas' : 'Calibri',
