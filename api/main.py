@@ -49,17 +49,28 @@ def run_pipeline(job_id: str, topic: str):
             if result.returncode != 0:
                 raise Exception(f"{msg} failed:\n{result.stderr[-1000:]}")
 
-        output_files = sorted(
+        pptx_files = sorted(
             Path("output").glob("*.pptx"),
             key=lambda p: p.stat().st_mtime,
             reverse=True,
         )
-        if not output_files:
+        if not pptx_files:
             raise Exception("Pipeline completed but no PPTX was generated")
+
+        jobs[job_id]["message"] = "Converting to PDF"
+        pdf_env = {**env, "HOME": "/tmp"}
+        result = subprocess.run(
+            ["libreoffice", "--headless", "--convert-to", "pdf",
+             "--outdir", "output/", str(pptx_files[0])],
+            capture_output=True, text=True, env=pdf_env,
+        )
+        pdf_path = pptx_files[0].with_suffix(".pdf")
+        if result.returncode != 0 or not pdf_path.exists():
+            raise Exception(f"PDF conversion failed:\n{result.stderr[-500:]}")
 
         jobs[job_id]["status"] = "complete"
         jobs[job_id]["message"] = "Done"
-        jobs[job_id]["file"] = str(output_files[0])
+        jobs[job_id]["file"] = str(pdf_path)
 
     except Exception as e:
         jobs[job_id]["status"] = "error"
@@ -115,6 +126,6 @@ async def download(job_id: str):
         raise HTTPException(status_code=400, detail="Report not ready yet")
     return FileResponse(
         job["file"],
-        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        media_type="application/pdf",
         filename=Path(job["file"]).name,
     )

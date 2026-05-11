@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 from datetime import datetime
 import matplotlib
@@ -89,32 +90,110 @@ def chart_top_videos(videos):
     return save(fig, 'top_videos.png')
 
 
-def chart_engagement(videos):
-    top = [v for v in videos[:60] if v["views"] > 0 and v["likes"] > 0]
+def chart_engagement_rate(videos):
+    top = [v for v in videos[:80] if v["views"] > 0 and v["likes"] > 0]
     if not top:
         return None
-    xs  = [v["views"] for v in top]
-    ys  = [v["likes"] / v["views"] * 100 for v in top]
-    cs  = [v["comments"] for v in top]
-    mc  = max(cs) if cs else 1
-    sz  = [max(18, c / mc * 280) for c in cs]
+    top.sort(key=lambda v: v["likes"] / v["views"], reverse=True)
+    top = top[:10]
 
-    fig, ax = plt.subplots(figsize=(10, 5.2))
+    labels = [v["title"][:38] + "…" if len(v["title"]) > 38 else v["title"] for v in top]
+    rates  = [v["likes"] / v["views"] * 100 for v in top]
+
+    fig, ax = plt.subplots(figsize=(11, 5.5))
     fig.patch.set_facecolor(BG)
     ax.set_facecolor(CARD)
 
-    ax.scatter(xs, ys, s=sz, color=COLORS[2], alpha=0.7, edgecolors=BORDER,
-               linewidth=0.5, zorder=3)
-    ax.set_xscale('log')
-    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: fmt(x)))
-    ax.set_xlabel("Total Views (log scale)", color=SUBLABEL, fontsize=9, labelpad=8)
-    ax.set_ylabel("Engagement Rate  (likes / views %)", color=SUBLABEL, fontsize=9, labelpad=8)
-    ax.set_title("Engagement Rate vs. Views\nbubble size = comment count",
-                 fontsize=13, fontweight='bold', color=TEXT, pad=14, loc='left')
-    ax.tick_params(colors=MUTED)
+    bars = ax.barh(range(len(labels)), rates, color=COLORS[2], height=0.65, zorder=3)
+    ax.set_yticks(range(len(labels)))
+    ax.set_yticklabels(labels, fontsize=8.5, color=TEXT)
+    ax.invert_yaxis()
+    ax.set_xlabel("Engagement Rate (likes / views %)", color=SUBLABEL, fontsize=9, labelpad=8)
+    ax.set_title("Top 10 Videos by Engagement Rate", fontsize=13, fontweight='bold',
+                 color=TEXT, pad=14, loc='left')
+    ax.tick_params(axis='x', colors=MUTED)
+    ax.tick_params(axis='y', colors=TEXT)
+
+    mx = max(rates)
+    for bar, r in zip(bars, rates):
+        ax.text(bar.get_width() + mx * 0.01, bar.get_y() + bar.get_height() / 2,
+                f"{r:.1f}%", va='center', fontsize=8, color=SUBLABEL)
 
     plt.tight_layout(pad=1.5)
     return save(fig, 'engagement.png')
+
+
+def _parse_duration(s):
+    if not s:
+        return 0
+    m = re.match(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', s)
+    if not m:
+        return 0
+    return int(m.group(1) or 0) * 3600 + int(m.group(2) or 0) * 60 + int(m.group(3) or 0)
+
+
+def chart_video_length(videos):
+    buckets = [
+        ("Shorts\n<1 min",     0,    60),
+        ("Short\n1–5 min",     60,   300),
+        ("Medium\n5–20 min",   300,  1200),
+        ("Long\n20–60 min",    1200, 3600),
+        ("Very Long\n60+ min", 3600, float('inf')),
+    ]
+
+    counts, avg_views, labels = [], [], []
+    for label, lo, hi in buckets:
+        vids = [v for v in videos if lo <= _parse_duration(v.get("duration", "")) < hi]
+        counts.append(len(vids))
+        avg_views.append(sum(v["views"] for v in vids) / len(vids) if vids else 0)
+        labels.append(label)
+
+    if sum(counts) == 0:
+        return None
+
+    x   = np.arange(len(labels))
+    w   = 0.38
+
+    fig, ax1 = plt.subplots(figsize=(10, 5))
+    fig.patch.set_facecolor(BG)
+    ax1.set_facecolor(CARD)
+
+    bars1 = ax1.bar(x - w / 2, counts, w, color=COLORS[0], label='Video Count', zorder=3)
+    ax1.set_ylabel('Number of Videos', color=SUBLABEL, fontsize=9)
+    ax1.tick_params(axis='y', colors=MUTED)
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(labels, fontsize=8.5, color=TEXT)
+    ax1.tick_params(axis='x', colors=TEXT)
+
+    ax2 = ax1.twinx()
+    bars2 = ax2.bar(x + w / 2, avg_views, w, color=COLORS[1], label='Avg Views', zorder=3)
+    ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: fmt(v)))
+    ax2.set_ylabel('Avg Views', color=SUBLABEL, fontsize=9)
+    ax2.tick_params(axis='y', colors=MUTED)
+
+    ax1.set_title('Video Length vs Performance', fontsize=13, fontweight='bold',
+                  color=TEXT, pad=14, loc='left')
+
+    from matplotlib.patches import Patch
+    legend_els = [Patch(facecolor=COLORS[0], label='Video Count'),
+                  Patch(facecolor=COLORS[1], label='Avg Views')]
+    ax1.legend(handles=legend_els, loc='upper right',
+               facecolor=CARD, edgecolor=BORDER, labelcolor=TEXT, fontsize=8)
+
+    for bar, c in zip(bars1, counts):
+        if c > 0:
+            ax1.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.1,
+                     str(c), ha='center', fontsize=8.5, color=SUBLABEL)
+
+    mx = max(avg_views) if avg_views else 1
+    for bar, v in zip(bars2, avg_views):
+        if v > 0:
+            ax2.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + mx * 0.01,
+                     fmt(v), ha='center', fontsize=8.5, color=SUBLABEL)
+
+    ax1.set_axisbelow(True)
+    plt.tight_layout(pad=1.5)
+    return save(fig, 'video_length.png')
 
 
 def chart_top_channels(channels):
@@ -243,7 +322,8 @@ def main():
 
     steps = [
         ("Top videos",       lambda: chart_top_videos(videos)),
-        ("Engagement",       lambda: chart_engagement(videos)),
+        ("Engagement rate",  lambda: chart_engagement_rate(videos)),
+        ("Video length",     lambda: chart_video_length(videos)),
         ("Top channels",     lambda: chart_top_channels(channels)),
         ("Views dist",       lambda: chart_views_distribution(videos)),
         ("Content themes",   lambda: chart_content_themes(insights)),

@@ -170,6 +170,25 @@ Return this exact JSON (no markdown, no fences):
     ],
     "rising_vs_established": "Based on video count vs views ratios, which channels are punching above their weight? Which established channels show signs of stagnation? Be specific with channel names and metrics.",
     "differentiation_map": "How do the top 5 channels each carve out distinct territory? What's each one's defensible angle? Where is the unclaimed white space?"
+  }},
+  "entry_strategy": {{
+    "market_verdict": "One sentence verdict: Worth entering / Saturated / Niche opportunity. Cite the specific reason from the data (e.g. 'Worth entering — top 3 channels hold 62% of views but none focus on X, leaving a clear lane').",
+    "your_positioning": "The single angle a new creator with $500/month can own that the top 5 channels don't cover. Must cite a specific gap with a number from the data.",
+    "days_1_to_30": [
+      "Action verb + specific tactic (max 20 words). E.g. 'Post 3 Shorts/week using the [hook pattern] format that drove 105M views for Texas Theory Optimal'",
+      "Action verb + specific tactic (max 20 words)",
+      "Action verb + specific tactic (max 20 words)"
+    ],
+    "days_31_to_60": [
+      "Action verb + specific tactic based on what you learned in month 1 (max 20 words)",
+      "Action verb + specific tactic (max 20 words)",
+      "Action verb + specific tactic (max 20 words)"
+    ],
+    "days_61_to_90": [
+      "Action verb + tactic to scale what worked and double down (max 20 words)",
+      "Action verb + specific tactic (max 20 words)",
+      "Action verb + specific tactic (max 20 words)"
+    ]
   }}
 }}
 
@@ -178,13 +197,14 @@ CRITICAL RULES:
 - Never use vague language like 'various', 'diverse', 'multiple' — say the exact count
 - Never say 'popular' without saying HOW popular (views, subs, engagement rate)
 - Compare channels to each other, not just describe them individually
-- Every recommendation must be executable by a solo creator with $500/month budget
-- Include at least one contrarian insight that challenges conventional wisdom in this space
+- Every bullet point must START with an action verb (Post, Avoid, Use, Target, Publish, Study, Build, Focus)
+- Every action in entry_strategy must be specific enough to execute today — no generic advice
+- entry_strategy bullets max 20 words each
 - avg_views in dominant_content_themes should be calculated from actual video data"""
 
     resp = client.chat.completions.create(
         model="gpt-4o",
-        max_tokens=4000,
+        max_tokens=5500,
         messages=[
             {"role": "system", "content": "You are a YouTube content strategy analyst. Return only valid JSON with no markdown fences or extra text."},
             {"role": "user", "content": prompt},
